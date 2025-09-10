@@ -2,7 +2,7 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  modules: ['@nuxtjs/tailwindcss', '@prisma/nuxt'],
+  modules: ['@nuxtjs/tailwindcss', '@prisma/nuxt', '@pinia/nuxt', 'nuxt-toast'],
   components: [
     {
       path: '~/components',
