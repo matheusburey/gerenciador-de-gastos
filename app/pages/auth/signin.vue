@@ -41,9 +41,10 @@
                 v-model="email"
                 label="Email"
                 type="email"
+                :error="errors ? 'Email inválido' : ''"
                 placeholder="seu@email.com"
-                required
                 autocomplete="email"
+                @input="errors = false"
               />
               
               <div>
@@ -51,25 +52,21 @@
                   v-model="password"
                   label="Senha"
                   type="password"
+                  :error="errors ? 'Senha inválida' : ''"
                   placeholder="Sua senha"
-                  required
                   autocomplete="current-password"
+                  @input="errors = false"
                 />
                 <NuxtLink to="/auth/forgot-password" class="text-xs text-indigo-600 hover:text-indigo-500">
                   Esqueceu sua senha?
                 </NuxtLink>
-              </div>
-              
-              <div class="flex items-center justify-between">
-                <CheckboxUi v-model="rememberMe">
-                  Lembrar de mim
-                </CheckboxUi>
               </div>
             </div>
 
             <ButtonUi
               type="submit" 
               :loading="isLoading"
+              :disabled="isLoading"
               class="w-full"
             >
               Entrar
@@ -93,26 +90,38 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '~/stores/auth'
+
+const toast = useToast()
+const authStore = useAuthStore()
+const router = useRouter()
 
 const email = ref('')
 const password = ref('')
-const rememberMe = ref(false)
 const isLoading = ref(false)
-const router = useRouter()
+const errors = ref(false)
+
 
 const handleSignIn = async () => {
   try {
+    if (!email.value || !password.value) {
+      errors.value = true
+      toast.error({ title: 'Preencha todos os campos' })
+      return
+    }
+
     isLoading.value = true
-    // TODO: Implement authentication logic
-    console.log('Signing in with:', { 
-      email: email.value,
-      rememberMe: rememberMe.value 
-    })
-    await router.push('/dashboard')
+    const mensagemError = await authStore.login(email.value, password.value)
+    if (mensagemError) {
+      errors.value = true
+      toast.error({ title: mensagemError })
+      isLoading.value = false
+    } else {
+      toast.success({ title: 'Login realizado com sucesso!'})
+      await router.push('/dashboard')
+    }
   } catch (error) {
     console.error('Error signing in:', error)
-  } finally {
-    isLoading.value = false
-  }
+  } 
 }
 </script>
