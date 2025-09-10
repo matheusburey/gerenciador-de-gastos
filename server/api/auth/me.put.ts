@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
     })
 
     if (!user) {
-      throw new Error('User not found')
+      throw new Error('Usuário não encontrado')
     }
 
     return {
@@ -25,6 +25,6 @@ export default defineEventHandler(async (event) => {
     }
 
   } catch (error) {
-    throw createError({ statusCode: 401, message: 'Invalid token' })
+    throw createError({ statusCode: 401, message: 'Token inválido' })
   }
 })

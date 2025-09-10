@@ -8,14 +8,14 @@ export default defineEventHandler(async (event) => {
   if (!name || !email || !password) {
     throw createError({
       statusCode: 400,
-      message: 'Missing required fields'
+      message: 'Preencha todos os campos'
     })
   }
 
   if (password.length < 8) {
     throw createError({
       statusCode: 400,
-      message: 'Password must be at least 8 characters long'
+      message: 'Senha deve ter pelo menos 8 caracteres'
     })
   }
 
@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
     if (existingUser) {
       throw createError({
         statusCode: 400,
-        message: 'Email already registered'
+        message: 'Email já cadastrado'
       })
     }
 
@@ -43,8 +43,9 @@ export default defineEventHandler(async (event) => {
     // Create new user
     const user = await createUser(userData)
 
-    // Return user data and token
+    const token = generateToken(user.id)
     return {
+      token,
       user: userTransformer(user)
     }
   } catch (error: any) {

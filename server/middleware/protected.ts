@@ -1,7 +1,7 @@
-export default defineEventHandler(async (event) => {
+export default defineEventHandler((event) => {
   // ignore health check and auth routes
   const url = event.node.req.url!
-  if (['/api/health', '/api/auth/login', '/api/auth/signup'].includes(url)) return
+  if (!url.startsWith('/api') || ['/api/health', '/api/auth/login', '/api/auth/signup'].includes(url)) return
 
   const authHeader = getHeader(event, 'authorization')
 
