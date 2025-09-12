@@ -17,43 +17,31 @@ model User {
   password      String
   profileImage  String?
   emailVerified Boolean       @default(false)
-  accounts      Account[]
-  sessions      Session[]
+  bankAccounts  BankAccount[]
   categories    Category[]
-  transactions  Transaction[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+  Transaction   Transaction[]
 
   @@map("users")
 }
 
-model Account {
-  id                String  @id @default(uuid())
+model BankAccount {
+  id                String        @id @default(uuid())
+  name              String        @default("Conta Principal")
+  color             String        @default("#808080")
+  icon              String        @default("")
+  balance           Int           @default(0)
+  currency          String        @default("BRL")
+  include_in_budget Boolean       @default(true)
   userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions      Transaction[]
 
-  @@unique([provider, providerAccountId])
-  @@map("accounts")
-}
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-model Session {
-  id           String   @id @default(uuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("sessions")
+  @@map("bank_accounts")
 }
 
 model Category {
@@ -61,7 +49,7 @@ model Category {
   name         String
   description  String?
   color        String        @default("#808080")
-  icon         String?
+  icon         String        @default("landmark")
   type         String // 'income' or 'expense'
   userId       String
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -75,14 +63,18 @@ model Category {
 
 model Transaction {
   id          String   @id @default(uuid())
-  amount      Float
+  amount      Int
   description String?
   date        DateTime @default(now())
-  type        String // 'income' or 'expense'
-  categoryId  String
-  category    Category @relation(fields: [categoryId], references: [id])
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String // 'income' or 'expense' or 'credit'
+
+  categoryId    String
+  category      Category    @relation(fields: [categoryId], references: [id])
+  bankAccountId String
+  bankAccount   BankAccount @relation(fields: [bankAccountId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

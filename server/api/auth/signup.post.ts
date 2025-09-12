@@ -1,3 +1,5 @@
+import { createAccount } from '~~/server/db/bankAccount'
+import { createDefaultCategories } from '~~/server/db/categories'
 import { createUser, getUserByEmail } from '~~/server/db/users'
 import { userTransformer } from '~~/server/transformers/user'
 
@@ -42,6 +44,8 @@ export default defineEventHandler(async (event) => {
 
     // Create new user
     const user = await createUser(userData)
+    await createAccount({ user: { connect: { id: user.id } } })
+    await createDefaultCategories(user.id)
 
     const token = generateToken(user.id)
     return {
