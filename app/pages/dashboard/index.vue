@@ -3,8 +3,6 @@
     <!-- Transaction Form Modal -->
     <TransactionFormModal
       :is-open="isTransactionModalOpen"
-      :categories="categories"
-      :bank-accounts="bankAccounts"
       @close="closeTransactionModal"
       @submit="handleTransactionSubmit"
     />
@@ -17,25 +15,25 @@
     <!-- Balance Card -->
     <div class="grid grid-cols-4 gap-6 mb-6">
       <BalanceCard
-        :value="data?.summary?.totalBalance || 0"
+        :value="summary?.totalBalance || 0"
         :icon="Landmark"
         label="Saldo atual"
         color="text-blue-500"
       />
       <BalanceCard
-        :value="data?.summary?.totalIncome || 0"
+        :value="summary?.totalIncome || 0"
         :icon="TrendingUp"
         label="Receita"
         color="text-green-500"
       />
       <BalanceCard
-        :value="data?.summary?.totalExpenses || 0"
+        :value="summary?.totalExpenses || 0"
         :icon="TrendingDown"
         label="Despesas"
         color="text-red-500"
       />
       <BalanceCard
-        :value="data?.summary?.totalExpenses || 0"
+        :value="summary?.totalCredit || 0"
         :icon="CreditCard"
         label="Cartões"
         color="text-yellow-500"
@@ -49,7 +47,7 @@
           <h2 class="text-gray-500 text-sm font-medium">Despesas</h2>
         </div>
         <div class="w-full h-[270px]">
-          <Doughnut :data="chartData" :options="options" />
+          <Doughnut :data="chartDataExpense" :options="options" />
         </div>
       </div>
       <div class="bg-white rounded-2xl shadow-md p-6 mb-6 w-1/2 h-[350px]">
@@ -57,7 +55,7 @@
           <h2 class="text-gray-500 text-sm font-medium">Receitas</h2>
         </div>
         <div class="w-full h-[270px]">
-          <Doughnut :data="chartData" :options="options" />
+          <Doughnut :data="chartDataIncome" :options="options" />
         </div>
       </div>
     </div>
@@ -70,22 +68,18 @@
       </div>
 
       <div class="space-y-4">
-        <div v-if="data?.recentTransactions">
+        <div v-if="recentTransactions">
           <div
-            v-for="transaction in data.recentTransactions"
+            v-for="transaction in recentTransactions"
             :key="transaction.id"
             class="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors"
           >
             <div class="flex items-center">
               <div
-                class="p-3 rounded-full"
-                :class="
-                  transaction.type === 'expense'
-                    ? 'bg-red-100 text-red-500'
-                    : 'bg-green-100 text-green-500'
-                "
+                class="p-3 rounded-full text-white"
+                :style="{ backgroundColor: transaction.category.color }"
               >
-                <component :is="icons[transaction?.category?.icon]" />
+                <component :is="getIcon(transaction?.category?.icon)" />
               </div>
               <div class="ml-4">
                 <h3 class="font-medium text-gray-800">
@@ -99,21 +93,21 @@
             </div>
             <div
               class="font-medium"
-              :class="
-                transaction.type === 'expense'
-                  ? 'text-red-500'
-                  : 'text-green-500'
-              "
+              :style="{ color: transaction.category.color }"
             >
               {{ transaction.type === "expense" ? "-" : "+" }}
-              {{ transaction.amount }}
+              {{ formatCurrency(transaction.amount) }}
             </div>
           </div>
+        </div>
+        <div v-else class="flex justify-center items-center p-8">
+          <p class="text-gray-500">Nenhuma transação recente</p>
         </div>
       </div>
 
       <button
         class="mt-4 w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-gray-400 hover:text-gray-600 transition-colors flex items-center justify-center"
+        @click="openTransactionModal"
       >
         <Plus class="h-5 w-5 mr-2" />
         Adicionar Transação
@@ -137,59 +131,48 @@ import { Doughnut } from "vue-chartjs";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-interface DashboardData {
-  accounts: Array<{
-    id: string;
-    name: string;
-    balance: number;
-    currency: string;
-    color: string;
-    icon: string;
-  }>;
-  recentTransactions: Array<{
-    id: string;
-    amount: number;
-    description: string | null;
-    date: Date;
-    type: string;
-    category: {
-      icon: string;
-      name: string;
-      color: string;
-    };
-  }>;
-  summary: {
-    totalBalance: number;
-    totalIncome: number;
-    totalExpenses: number;
-    netIncome: number;
-  };
-  categorySpending: Array<{
-    name: string;
-    amount: number;
-    color: string;
-    percentage: number;
-  }>;
-}
-
 definePageMeta({
   title: "Dashboard",
   layout: "dashboard-default",
 });
 
 const authStore = useAuthStore();
-
-const data = ref({} as DashboardData);
+const {
+  categories,
+  accounts,
+  summary,
+  transactionsType,
+  recentTransactions,
+  fetchDashboardData,
+} = useDashboardStore();
 
 const isTransactionModalOpen = ref(false);
-const categories = ref<Array<{ id: string; name: string }>>([]);
-const bankAccounts = ref<Array<{ id: string; name: string }>>([]);
 
-// Fetch categories and bank accounts
-const { data: categoriesData } = await useFetch("/api/categories");
-const { data: bankAccountsData } = await useFetch("/api/bank-accounts");
-console.log(categoriesData.value);
-console.log(bankAccountsData.value);
+const chartDataIncome = computed(() => {
+  const income = transactionsType?.income || [];
+  return {
+    labels: income.map((t) => t.categoryName),
+    datasets: [
+      {
+        data: income.map((t) => t.amount / 100),
+        backgroundColor: income.map((t) => t.categoryColor),
+      },
+    ],
+  };
+});
+
+const chartDataExpense = computed(() => {
+  const expense = transactionsType?.expense || [];
+  return {
+    labels: expense.map((t) => t.categoryName),
+    datasets: [
+      {
+        data: expense.map((t) => t.amount / 100),
+        backgroundColor: expense.map((t) => t.categoryColor),
+      },
+    ],
+  };
+});
 
 const openTransactionModal = () => {
   isTransactionModalOpen.value = true;
@@ -199,22 +182,17 @@ const closeTransactionModal = () => {
   isTransactionModalOpen.value = false;
 };
 
-async function getDashboardData() {
-  const token = await authStore.getToken();
-  const response = await $fetch("/api/dashboard", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  data.value = response;
-}
-
 const handleTransactionSubmit = async (transactionData: any) => {
   try {
     const token = await authStore.getToken();
-    await $fetch("/api/transactions", {
+    const payload = {
+      ...transactionData,
+      amount: Math.round(parseFloat(transactionData.amount) * 100), // Convert to cents
+      date: new Date(transactionData.date).toISOString(),
+    };
+    await $fetch("/api/transaction", {
       method: "POST",
-      body: JSON.stringify(transactionData),
+      body: JSON.stringify(payload),
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
@@ -222,24 +200,30 @@ const handleTransactionSubmit = async (transactionData: any) => {
     });
 
     // Refresh dashboard data
-    await getDashboardData();
+    await fetchDashboardData(token!);
     closeTransactionModal();
   } catch (error) {
     console.error("Error creating transaction:", error);
   }
 };
 
-onMounted(getDashboardData);
-
-const chartData = ref({
-  labels: ["VueJs", "EmberJs", "ReactJs", "AngularJs"],
-  datasets: [
-    {
-      backgroundColor: ["#41B883", "#E46651", "#00D8FF", "#DD1B16"],
-      data: [40, 20, 80, 10],
-    },
-  ],
+onMounted(async () => {
+  const token = await authStore.getToken();
+  await fetchDashboardData(token!);
 });
+
+function getIcon(icon: string) {
+  const key = icon as keyof typeof icons;
+  return (icons[key] || icons.List) as any;
+}
+
+function formatCurrency(value: number) {
+  const toCents = value / 100;
+  return toCents.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
 
 const options = {
   responsive: true,

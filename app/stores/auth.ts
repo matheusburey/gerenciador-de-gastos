@@ -116,6 +116,14 @@ export const useAuthStore = defineStore('auth', {
       } finally {
         this.loading = false
       }
+    },
+
+    async getToken() {
+      let token = this.token
+      if (!token) {
+        token = localStorage.getItem('token')
+      }
+      return token
     }
   }
 })

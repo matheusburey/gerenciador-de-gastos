@@ -2,7 +2,7 @@
   <div v-if="isOpen" class="fixed inset-0 z-50 overflow-y-auto">
     <!-- Overlay -->
     <div
-      class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+      class="fixed inset-0 bg-black opacity-60 transition-opacity"
       @click="closeModal"
     ></div>
 
@@ -52,7 +52,7 @@
             <div class="flex space-x-4">
               <label
                 v-for="type in transactionTypes"
-                :key="type.id"
+                :key="type.value"
                 class="flex items-center cursor-pointer"
               >
                 <input
@@ -143,7 +143,7 @@
             >
               <option value="">Selecione uma categoria</option>
               <option
-                v-for="category in categories"
+                v-for="category in categoriesOptions"
                 :key="category.id"
                 :value="category.id"
               >
@@ -168,7 +168,7 @@
             >
               <option value="">Selecione uma conta</option>
               <option
-                v-for="account in bankAccounts"
+                v-for="account in accounts"
                 :key="account.id"
                 :value="account.id"
               >
@@ -179,42 +179,22 @@
 
           <!-- Form Actions -->
           <div class="flex justify-end space-x-3">
-            <button
+            <ButtonUi
               type="button"
+              variant="outline"
               @click="closeModal"
-              class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               :disabled="isSubmitting"
             >
               Cancelar
-            </button>
-            <button
+            </ButtonUi>
+            <ButtonUi
               type="submit"
-              class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              variant="primary"
+              :loading="isSubmitting"
               :disabled="isSubmitting"
             >
-              <svg
-                v-if="isSubmitting"
-                class="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                ></circle>
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
               {{ transactionId ? "Atualizar" : "Salvar" }}
-            </button>
+            </ButtonUi>
           </div>
         </form>
       </div>
@@ -223,24 +203,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref } from "vue";
 
 const props = defineProps({
   isOpen: {
     type: Boolean,
     default: false,
-  },
-  transaction: {
-    type: Object,
-    default: () => ({}),
-  },
-  categories: {
-    type: Array,
-    default: () => [],
-  },
-  bankAccounts: {
-    type: Array,
-    default: () => [],
   },
   transactionId: {
     type: String,
@@ -248,12 +216,14 @@ const props = defineProps({
   },
 });
 
+const { categories, accounts } = useDashboardStore();
+
 const emit = defineEmits(["close", "submit"]);
 
 const isSubmitting = ref(false);
 
 const form = ref({
-  type: "EXPENSE",
+  type: "expense",
   amount: "",
   description: "",
   date: new Date().toISOString().split("T")[0],
@@ -262,36 +232,13 @@ const form = ref({
 });
 
 const transactionTypes = [
-  { id: "expense", value: "EXPENSE", label: "Despesa" },
-  { id: "income", value: "INCOME", label: "Receita" },
+  { value: "expense", label: "Despesa" },
+  { value: "income", label: "Receita" },
 ];
 
-watch(
-  () => props.transaction,
-  (newVal) => {
-    if (newVal && Object.keys(newVal).length > 0) {
-      form.value = {
-        type: newVal.type,
-        amount: (newVal.amount / 100).toFixed(2),
-        description: newVal.description,
-        date: newVal.date.split("T")[0],
-        categoryId: newVal.categoryId,
-        bankAccountId: newVal.bankAccountId,
-      };
-    } else {
-      // Reset form when creating a new transaction
-      form.value = {
-        type: "EXPENSE",
-        amount: "",
-        description: "",
-        date: new Date().toISOString().split("T")[0],
-        categoryId: "",
-        bankAccountId: "",
-      };
-    }
-  },
-  { immediate: true, deep: true }
-);
+const categoriesOptions = computed(() => {
+  return categories.filter((category) => category.type === form.value.type);
+});
 
 const closeModal = () => {
   emit("close");
@@ -301,19 +248,7 @@ const handleSubmit = async () => {
   if (isSubmitting.value) return;
 
   isSubmitting.value = true;
-
-  try {
-    const transactionData = {
-      ...form.value,
-      amount: Math.round(parseFloat(form.value.amount) * 100), // Convert to cents
-      date: new Date(form.value.date).toISOString(),
-    };
-
-    emit("submit", transactionData);
-  } catch (error) {
-    console.error("Error submitting transaction:", error);
-  } finally {
-    isSubmitting.value = false;
-  }
+  emit("submit", form.value);
+  isSubmitting.value = false;
 };
 </script>

@@ -10,21 +10,19 @@
     <div class="pr-2">
       <p class="text-xs text-gray-600">{{ label }}</p>
       <p class="text-3xl font-bold" :class="color">
-        {{
-          value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-        }}
+        {{ currencyValue }}
       </p>
     </div>
   </div>
 </template>
 <script lang="ts" setup>
-defineProps({
+const props = defineProps({
   value: {
     type: Number,
-    required: true,
+    default: 0,
   },
   icon: {
-    type: Object,
+    type: Function,
     required: true,
   },
   label: {
@@ -35,5 +33,13 @@ defineProps({
     type: String,
     required: true,
   },
+});
+
+const currencyValue = computed(() => {
+  const toCents = props.value / 100;
+  return toCents.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
 });
 </script>
