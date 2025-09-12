@@ -48,11 +48,11 @@ export default defineEventHandler(async (event) => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(new Date().getDate() - 30);
 
-    const accounts = await getAccounts(userId); // Get user's accounts
+    const accounts = await getAccounts(userId);
     const recentTransactions = await getRecentTransactions(
       userId,
       thirtyDaysAgo
-    ); // Get recent transactions (last 10)
+    );
 
     // Calculate summary
     const summary = recentTransactions.reduce(
@@ -103,7 +103,7 @@ export default defineEventHandler(async (event) => {
 
     const response: DashboardData = {
       accounts,
-      recentTransactions,
+      recentTransactions: recentTransactions.slice(0, 10),
       summary: {
         totalBalance,
         totalIncome: summary.totalIncome,
